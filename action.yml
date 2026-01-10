@@ -1,5 +1,5 @@
 name: "Lock and Authenticate Environment"
-description: "Lock a Salesforce environment using SFP Server and authenticate to it with distributed locking for safe concurrent access. Automatically unlocks on workflow completion."
+description: 'Lock and authenticate to a Salesforce environment with automatic unlock on completion'
 author: "flxbl-io"
 
 branding:
