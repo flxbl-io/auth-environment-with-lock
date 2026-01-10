@@ -1,0 +1,59 @@
+name: "Lock and Authenticate Environment"
+description: "Lock a Salesforce environment using SFP Server and authenticate to it with distributed locking for safe concurrent access. Automatically unlocks on workflow completion."
+author: "flxbl-io"
+
+branding:
+  icon: "lock"
+  color: "green"
+
+inputs:
+  environment:
+    description: "Name of the environment to lock and authenticate"
+    required: true
+  repository:
+    description: "Repository name (format: owner/repo)"
+    required: false
+    default: ${{ github.repository }}
+  duration:
+    description: "Lock duration in minutes"
+    required: false
+    default: "60"
+  reason:
+    description: "Reason for locking the environment (e.g., 'PR #123 validation')"
+    required: true
+  sfp-server-url:
+    description: "URL to the SFP Server instance (e.g., https://your-org.flxbl.io)"
+    required: true
+  sfp-server-token:
+    description: "Token for SFP Server authentication"
+    required: true
+  wait:
+    description: "Wait for lock if environment is already locked by another workflow"
+    required: false
+    default: "true"
+
+outputs:
+  alias:
+    description: "Alias used for the authenticated org"
+  ticket-id:
+    description: "Lock ticket ID (used internally for automatic unlock)"
+  is-active:
+    description: "Whether the environment is currently active"
+  org-id:
+    description: "Org ID of the authenticated org"
+  instance-url:
+    description: "Instance URL of the authenticated org"
+  login-url:
+    description: "Login URL of the authenticated org"
+  access-token:
+    description: "Access token of the authenticated org"
+  username:
+    description: "Username of the authenticated org"
+  auth-method:
+    description: "Authentication method used (sfp-server, server-sandbox, or server-scratch)"
+
+runs:
+  using: "node20"
+  main: "dist/index.js"
+  post: "dist/cleanup.js"
+  post-if: "always()"
