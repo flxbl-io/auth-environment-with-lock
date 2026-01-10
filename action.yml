@@ -3,7 +3,7 @@ description: 'Lock and authenticate to a Salesforce environment with automatic u
 author: "flxbl-io"
 
 branding:
-  icon: "lock"
+  icon: "anchor"
   color: "green"
 
 inputs:
