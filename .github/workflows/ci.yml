@@ -6,62 +6,9 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  contents: read
-
 jobs:
-  validate:
-    name: Validate Action
-    runs-on: ubuntu-latest
+  ci:
+    uses: flxbl-io/flxbl-actions/.github/workflows/ci.yml@main
+    with:
+      action-type: node
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Validate action.yml syntax
-        run: |
-          echo "Validating action.yml..."
-          python3 -c "import yaml; yaml.safe_load(open('action.yml'))"
-          echo "✓ action.yml is valid YAML"
-
-      - name: Check required fields
-        run: |
-          echo "Checking required action metadata..."
-          grep -q "^name:" action.yml && echo "✓ name field present"
-          grep -q "^description:" action.yml && echo "✓ description field present"
-          grep -q "^author:" action.yml && echo "✓ author field present"
-          grep -q "branding:" action.yml && echo "✓ branding field present"
-          grep -q "runs:" action.yml && echo "✓ runs field present"
-          grep -q 'using: "composite"' action.yml && echo "✓ composite action type"
-
-      - name: Shellcheck scripts
-        run: |
-          echo "Extracting and checking shell scripts..."
-          grep -A 1000 "run: |" action.yml | grep -v "run: |" | head -50 > /tmp/script_sample.sh || true
-          if [ -s /tmp/script_sample.sh ]; then
-            shellcheck --severity=error /tmp/script_sample.sh || echo "Note: Some shellcheck warnings (non-blocking)"
-          fi
-          echo "✓ Shell script check complete"
-
-  dry-run:
-    name: Dry Run Test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Test action loading
-        id: test-load
-        continue-on-error: true
-        uses: ./
-        with:
-          environment: 'test-env'
-          reason: 'CI validation'
-          sfp-server-url: 'https://example.flxbl.io'
-          sfp-server-token: 'test-token'
-
-      - name: Verify action structure
-        run: |
-          echo "Action loaded successfully (lock will fail without real SFP Server)"
-          echo "This validates the action.yml structure is correct"
