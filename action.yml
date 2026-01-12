@@ -20,7 +20,8 @@ inputs:
     default: "60"
   reason:
     description: "Reason for locking the environment (e.g., 'PR #123 validation')"
-    required: true
+    required: false
+    default: ""
   sfp-server-url:
     description: "URL to the SFP Server instance (e.g., https://your-org.flxbl.io)"
     required: true
@@ -31,26 +32,26 @@ inputs:
     description: "Wait for lock if environment is already locked by another workflow"
     required: false
     default: "true"
+  auto-unlock:
+    description: "Automatically unlock the environment when the workflow completes"
+    required: false
+    default: "true"
 
 outputs:
   alias:
-    description: "Alias used for the authenticated org"
+    description: "Alias used for the authenticated org (same as environment name)"
   ticket-id:
-    description: "Lock ticket ID (used internally for automatic unlock)"
-  is-active:
-    description: "Whether the environment is currently active"
-  org-id:
-    description: "Org ID of the authenticated org"
+    description: "Lock ticket ID (used for manual unlock if auto-unlock is disabled)"
   instance-url:
     description: "Instance URL of the authenticated org"
-  login-url:
-    description: "Login URL of the authenticated org"
   access-token:
-    description: "Access token of the authenticated org"
+    description: "Access token for the authenticated org"
   username:
-    description: "Username of the authenticated org"
+    description: "Salesforce username of the authenticated org"
+  is-active:
+    description: "Whether the lock was acquired"
   auth-method:
-    description: "Authentication method used (sfp-server, server-sandbox, or server-scratch)"
+    description: "Authentication method used (sfp-server)"
 
 runs:
   using: "node20"

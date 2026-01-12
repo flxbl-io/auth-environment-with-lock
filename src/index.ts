@@ -13,19 +13,13 @@ interface ExecOutput {
 
 interface LockResponse {
   ticketId: string;
-  environment: string;
-  lockedBy: string;
-  expiresAt: string;
-}
-
-interface OrgInfo {
-  alias?: string;
-  username?: string;
-  orgId?: string;
-  instanceUrl?: string;
-  loginUrl?: string;
+  status: string;
+  environmentId?: string;
+  environmentName?: string;
+  duration?: number;
+  salesforceUsername?: string;
   accessToken?: string;
-  isActive?: boolean;
+  instanceUrl?: string;
 }
 
 function printHeader(repository: string, serverUrl: string, environment: string): void {
@@ -41,7 +35,11 @@ function printHeader(repository: string, serverUrl: string, environment: string)
   console.log();
 }
 
-async function execCommand(command: string, args: string[], silent = false): Promise<ExecOutput> {
+async function execCommand(
+  command: string,
+  args: string[],
+  silent = false
+): Promise<ExecOutput> {
   let stdout = '';
   let stderr = '';
 
@@ -63,29 +61,37 @@ async function execCommand(command: string, args: string[], silent = false): Pro
 
 async function lockEnvironment(
   environment: string,
-  serverUrl: string,
-  serverToken: string,
+  repository: string,
   duration: string,
   reason: string,
-  wait: boolean
+  wait: boolean,
+  serverUrl: string,
+  serverToken: string
 ): Promise<LockResponse> {
   const args = [
     'server', 'environment', 'lock',
-    '-e', environment,
-    '--sfpserverurl', serverUrl,
-    '--sfpservertoken', serverToken,
-    '-d', duration,
-    '-r', reason,
+    '--name', environment,
+    '--repository', repository,
+    '--duration', duration,
+    '--sfp-server-url', serverUrl,
+    '-t', serverToken,
     '--json'
   ];
+
+  if (reason) {
+    args.push('--reason', reason);
+  }
 
   if (wait) {
     args.push('--wait');
   }
 
   core.info(`Locking environment: ${environment}`);
+  core.info(`Repository: ${repository}`);
   core.info(`Duration: ${duration} minutes`);
-  core.info(`Reason: ${reason}`);
+  if (reason) {
+    core.info(`Reason: ${reason}`);
+  }
   core.info(`Wait for lock: ${wait}`);
 
   const result = await execCommand('sfp', args, true);
@@ -108,74 +114,6 @@ async function lockEnvironment(
   }
 }
 
-async function authenticateOrg(
-  environment: string,
-  serverUrl: string,
-  serverToken: string
-): Promise<OrgInfo> {
-  const loginArgs = [
-    'server', 'org', 'login',
-    '-e', environment,
-    '--sfpserverurl', serverUrl,
-    '--sfpservertoken', serverToken,
-    '-a', environment,
-    '--json'
-  ];
-
-  core.info(`Authenticating to environment: ${environment}`);
-
-  const loginResult = await execCommand('sfp', loginArgs, true);
-
-  if (loginResult.exitCode !== 0) {
-    if (loginResult.stderr) {
-      core.debug(`sfp login stderr: ${loginResult.stderr}`);
-    }
-    throw new Error(`Failed to authenticate: ${loginResult.stderr || loginResult.stdout}`);
-  }
-
-  let orgInfo: OrgInfo = { alias: environment };
-
-  try {
-    const loginResponse = JSON.parse(loginResult.stdout);
-    orgInfo = {
-      alias: environment,
-      username: loginResponse.username,
-      orgId: loginResponse.orgId,
-      instanceUrl: loginResponse.instanceUrl,
-      loginUrl: loginResponse.loginUrl,
-      accessToken: loginResponse.accessToken,
-      isActive: loginResponse.isActive ?? true
-    };
-  } catch {
-    core.debug('Could not parse login response, fetching org info separately');
-  }
-
-  if (!orgInfo.username || !orgInfo.orgId) {
-    const displayArgs = ['org', 'display', '-o', environment, '--json'];
-    const displayResult = await execCommand('sf', displayArgs, true);
-
-    if (displayResult.exitCode === 0) {
-      try {
-        const displayResponse = JSON.parse(displayResult.stdout);
-        const result = displayResponse.result || displayResponse;
-        orgInfo = {
-          ...orgInfo,
-          username: orgInfo.username || result.username,
-          orgId: orgInfo.orgId || result.id || result.orgId,
-          instanceUrl: orgInfo.instanceUrl || result.instanceUrl,
-          loginUrl: orgInfo.loginUrl || result.loginUrl || result.sfdxAuthUrl,
-          accessToken: orgInfo.accessToken || result.accessToken,
-          isActive: orgInfo.isActive ?? (result.connectedStatus === 'Connected')
-        };
-      } catch {
-        core.debug('Could not parse sf org display response');
-      }
-    }
-  }
-
-  return orgInfo;
-}
-
 export async function run(): Promise<void> {
   try {
     const environment = core.getInput('environment', { required: true });
@@ -183,59 +121,68 @@ export async function run(): Promise<void> {
     const serverToken = core.getInput('sfp-server-token', { required: true });
     const repository = core.getInput('repository', { required: false }) || process.env.GITHUB_REPOSITORY || '';
     const duration = core.getInput('duration', { required: false }) || '60';
-    const reason = core.getInput('reason', { required: true });
+    const reason = core.getInput('reason', { required: false }) || '';
     const wait = core.getInput('wait', { required: false }) !== 'false';
+    const autoUnlock = core.getInput('auto-unlock', { required: false }) !== 'false';
 
     if (!repository) {
       throw new Error('Repository not specified and GITHUB_REPOSITORY not set');
     }
 
+    // Mark token as secret to prevent exposure in logs
+    core.setSecret(serverToken);
+
     printHeader(repository, serverUrl, environment);
 
     const lockResponse = await lockEnvironment(
       environment,
-      serverUrl,
-      serverToken,
+      repository,
       duration,
       reason,
-      wait
+      wait,
+      serverUrl,
+      serverToken
     );
 
     core.info(`Environment locked successfully`);
     core.info(`Ticket ID: ${lockResponse.ticketId}`);
-    core.info(`Expires at: ${lockResponse.expiresAt}`);
+    core.info(`Status: ${lockResponse.status}`);
 
-    core.saveState('TICKET_ID', lockResponse.ticketId);
-    core.saveState('ENVIRONMENT', environment);
-    core.saveState('SFP_SERVER_URL', serverUrl);
-    core.saveState('SFP_SERVER_TOKEN', serverToken);
-    core.saveState('LOCK_ACQUIRED', 'true');
-
-    core.setOutput('ticket-id', lockResponse.ticketId);
-
-    const orgInfo = await authenticateOrg(environment, serverUrl, serverToken);
-
-    core.info(`Authentication successful`);
-    core.info(`Alias: ${orgInfo.alias}`);
-    core.info(`Username: ${orgInfo.username || 'N/A'}`);
-    core.info(`Org ID: ${orgInfo.orgId || 'N/A'}`);
-
-    core.setOutput('alias', orgInfo.alias);
-    core.setOutput('is-active', String(orgInfo.isActive ?? true));
-    core.setOutput('org-id', orgInfo.orgId || '');
-    core.setOutput('instance-url', orgInfo.instanceUrl || '');
-    core.setOutput('login-url', orgInfo.loginUrl || '');
-    core.setOutput('username', orgInfo.username || '');
-    core.setOutput('auth-method', 'sfp-server');
-
-    if (orgInfo.accessToken) {
-      core.setSecret(orgInfo.accessToken);
-      core.setOutput('access-token', orgInfo.accessToken);
+    // Save state for cleanup (auto-unlock)
+    if (autoUnlock) {
+      core.saveState('TICKET_ID', lockResponse.ticketId);
+      core.saveState('ENVIRONMENT', environment);
+      core.saveState('REPOSITORY', repository);
+      core.saveState('SFP_SERVER_URL', serverUrl);
+      core.saveState('SFP_SERVER_TOKEN', serverToken);
+      core.saveState('AUTO_UNLOCK', 'true');
     }
+
+    // Set outputs
+    core.setOutput('ticket-id', lockResponse.ticketId);
+    core.setOutput('alias', environment);
+
+    // Extract credentials if available (when --wait was used and lock acquired)
+    if (lockResponse.status === 'acquired') {
+      if (lockResponse.accessToken) {
+        core.setSecret(lockResponse.accessToken);
+        core.setOutput('access-token', lockResponse.accessToken);
+      }
+
+      core.setOutput('instance-url', lockResponse.instanceUrl || '');
+      core.setOutput('username', lockResponse.salesforceUsername || '');
+      core.setOutput('is-active', 'true');
+    }
+
+    core.setOutput('auth-method', 'sfp-server');
 
     core.info('');
     core.info('Environment is now locked and authenticated.');
-    core.info('It will be automatically unlocked when the workflow completes.');
+    if (autoUnlock) {
+      core.info('It will be automatically unlocked when the workflow completes.');
+    } else {
+      core.info('Auto-unlock is disabled. Use unlock-environment action or manual unlock.');
+    }
 
   } catch (error) {
     if (error instanceof Error) {

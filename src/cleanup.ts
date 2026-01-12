@@ -23,7 +23,11 @@ function printHeader(environment: string, serverUrl: string): void {
   console.log();
 }
 
-async function execCommand(command: string, args: string[], silent = false): Promise<ExecOutput> {
+async function execCommand(
+  command: string,
+  args: string[],
+  silent = false
+): Promise<ExecOutput> {
   let stdout = '';
   let stderr = '';
 
@@ -46,16 +50,17 @@ async function execCommand(command: string, args: string[], silent = false): Pro
 async function unlockEnvironment(
   ticketId: string,
   environment: string,
+  repository: string,
   serverUrl: string,
   serverToken: string
 ): Promise<void> {
   const args = [
     'server', 'environment', 'unlock',
-    '-e', environment,
-    '-t', ticketId,
-    '--sfpserverurl', serverUrl,
-    '--sfpservertoken', serverToken,
-    '--json'
+    '--name', environment,
+    '--repository', repository,
+    '--ticket-id', ticketId,
+    '--sfp-server-url', serverUrl,
+    '-t', serverToken
   ];
 
   core.info(`Unlocking environment: ${environment}`);
@@ -75,29 +80,34 @@ async function unlockEnvironment(
 
 async function run(): Promise<void> {
   try {
-    const lockAcquired = core.getState('LOCK_ACQUIRED');
+    const autoUnlock = core.getState('AUTO_UNLOCK');
     const ticketId = core.getState('TICKET_ID');
     const environment = core.getState('ENVIRONMENT');
+    const repository = core.getState('REPOSITORY');
     const serverUrl = core.getState('SFP_SERVER_URL');
     const serverToken = core.getState('SFP_SERVER_TOKEN');
 
-    if (lockAcquired !== 'true') {
-      core.info('No lock was acquired in main step, skipping unlock');
+    if (autoUnlock !== 'true') {
+      core.info('Auto-unlock is disabled, skipping cleanup');
       return;
     }
 
-    if (!ticketId || !environment || !serverUrl || !serverToken) {
+    if (!ticketId || !environment || !repository || !serverUrl || !serverToken) {
       core.warning('Missing required state for unlock. The environment may need to be manually unlocked.');
       core.debug(`ticketId: ${ticketId ? 'present' : 'missing'}`);
       core.debug(`environment: ${environment ? 'present' : 'missing'}`);
+      core.debug(`repository: ${repository ? 'present' : 'missing'}`);
       core.debug(`serverUrl: ${serverUrl ? 'present' : 'missing'}`);
       core.debug(`serverToken: ${serverToken ? 'present' : 'missing'}`);
       return;
     }
 
+    // Mark token as secret to prevent exposure in logs
+    core.setSecret(serverToken);
+
     printHeader(environment, serverUrl);
 
-    await unlockEnvironment(ticketId, environment, serverUrl, serverToken);
+    await unlockEnvironment(ticketId, environment, repository, serverUrl, serverToken);
 
     core.info('');
     core.info('Cleanup completed successfully.');
