@@ -64,7 +64,7 @@ async function lockEnvironment(
   repository: string,
   duration: string,
   reason: string,
-  wait: boolean,
+  waitTimeout: string,
   serverUrl: string,
   serverToken: string
 ): Promise<LockResponse> {
@@ -82,7 +82,11 @@ async function lockEnvironment(
     args.push('--reason', reason);
   }
 
-  if (wait) {
+  // Always wait for lock acquisition
+  const timeoutMinutes = parseInt(waitTimeout, 10);
+  if (timeoutMinutes > 0) {
+    args.push('--wait-timeout', waitTimeout);
+  } else {
     args.push('--wait');
   }
 
@@ -92,7 +96,11 @@ async function lockEnvironment(
   if (reason) {
     core.info(`Reason: ${reason}`);
   }
-  core.info(`Wait for lock: ${wait}`);
+  if (timeoutMinutes > 0) {
+    core.info(`Wait timeout: ${waitTimeout} minutes`);
+  } else {
+    core.info(`Wait timeout: indefinite`);
+  }
 
   const result = await execCommand('sfp', args, true);
 
@@ -122,7 +130,7 @@ export async function run(): Promise<void> {
     const repository = core.getInput('repository', { required: false }) || process.env.GITHUB_REPOSITORY || '';
     const duration = core.getInput('duration', { required: false }) || '60';
     const reason = core.getInput('reason', { required: false }) || '';
-    const wait = core.getInput('wait', { required: false }) !== 'false';
+    const waitTimeout = core.getInput('wait-timeout', { required: false }) || '0';
     const autoUnlock = core.getInput('auto-unlock', { required: false }) !== 'false';
 
     if (!repository) {
@@ -139,7 +147,7 @@ export async function run(): Promise<void> {
       repository,
       duration,
       reason,
-      wait,
+      waitTimeout,
       serverUrl,
       serverToken
     );

@@ -38,14 +38,14 @@ A GitHub Action that locks a Salesforce environment using [SFP Server](https://d
     sfp-server-token: ${{ secrets.SFP_SERVER_TOKEN }}
 ```
 
-### Without Waiting (Fail Fast)
+### With Wait Timeout
 
 ```yaml
-- name: Lock environment (fail if busy)
+- name: Lock environment (max 10 min wait)
   uses: flxbl-io/lock-environment@v1
   with:
     environment: 'ci-sandbox-1'
-    wait: 'false'  # Fail immediately if locked by another workflow
+    wait-timeout: '10'  # Fail if lock not acquired within 10 minutes
     sfp-server-url: ${{ secrets.SFP_SERVER_URL }}
     sfp-server-token: ${{ secrets.SFP_SERVER_TOKEN }}
 ```
@@ -82,7 +82,7 @@ A GitHub Action that locks a Salesforce environment using [SFP Server](https://d
 | `repository` | Repository name (`owner/repo` format) | No | Current repository |
 | `duration` | Lock duration in minutes | No | `60` |
 | `reason` | Reason for locking (shown to other workflows) | No | - |
-| `wait` | Wait for lock if environment is busy | No | `true` |
+| `wait-timeout` | Max wait time in minutes (0 = indefinite) | No | `0` |
 | `auto-unlock` | Automatically unlock when workflow completes | No | `true` |
 
 ## Outputs

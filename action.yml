@@ -28,10 +28,10 @@ inputs:
   sfp-server-token:
     description: "Token for SFP Server authentication"
     required: true
-  wait:
-    description: "Wait for lock if environment is already locked by another workflow"
+  wait-timeout:
+    description: "Maximum time to wait for lock acquisition in minutes (0 = wait indefinitely)"
     required: false
-    default: "true"
+    default: "0"
   auto-unlock:
     description: "Automatically unlock the environment when the workflow completes"
     required: false
