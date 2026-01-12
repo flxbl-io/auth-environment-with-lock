@@ -1,7 +1,7 @@
 {
-  "name": "@flxbl-io/lock-environment-action",
+  "name": "@flxbl-io/auth-environment-with-lock",
   "version": "1.0.0",
-  "description": "GitHub Action to lock and authenticate Salesforce environments with automatic unlock via post step",
+  "description": "GitHub Action to authenticate to Salesforce environments with exclusive locking and automatic unlock",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc && ncc build src/index.ts -o dist --source-map --minify && ncc build src/cleanup.ts -o dist/cleanup --source-map --minify && mv dist/cleanup/index.js dist/cleanup.js && rm -rf dist/cleanup",
@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/flxbl-io/lock-environment-action.git"
+    "url": "git+https://github.com/flxbl-io/auth-environment-with-lock.git"
   },
   "keywords": [
     "github",
@@ -29,9 +29,9 @@
   "author": "flxbl-io",
   "license": "SEE LICENSE IN LICENSE",
   "bugs": {
-    "url": "https://github.com/flxbl-io/lock-environment-action/issues"
+    "url": "https://github.com/flxbl-io/auth-environment-with-lock/issues"
   },
-  "homepage": "https://github.com/flxbl-io/lock-environment-action#readme",
+  "homepage": "https://github.com/flxbl-io/auth-environment-with-lock#readme",
   "dependencies": {
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1"

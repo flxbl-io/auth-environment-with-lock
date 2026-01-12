@@ -1,5 +1,5 @@
-name: "Lock and Authenticate Environment"
-description: 'Lock and authenticate to a Salesforce environment with automatic unlock on completion'
+name: "Authenticate to Environment with Lock"
+description: 'Authenticate to a Salesforce environment with exclusive locking and automatic unlock'
 author: "flxbl-io"
 
 branding:

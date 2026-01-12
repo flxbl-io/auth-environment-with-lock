@@ -3,7 +3,7 @@ import * as exec from '@actions/exec';
 
 // Version from package.json
 const VERSION = '1.0.0';
-const ACTION_NAME = 'lock-environment';
+const ACTION_NAME = 'auth-environment-with-lock';
 
 interface ExecOutput {
   stdout: string;

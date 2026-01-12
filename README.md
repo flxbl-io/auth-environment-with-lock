@@ -1,8 +1,8 @@
-# Lock and Authenticate Environment Action
+# Authenticate to Environment with Lock
 
-[![CI](https://github.com/flxbl-io/lock-environment/actions/workflows/ci.yml/badge.svg)](https://github.com/flxbl-io/lock-environment/actions/workflows/ci.yml)
+[![CI](https://github.com/flxbl-io/auth-environment-with-lock/actions/workflows/ci.yml/badge.svg)](https://github.com/flxbl-io/auth-environment-with-lock/actions/workflows/ci.yml)
 
-A GitHub Action that locks a Salesforce environment using [SFP Server](https://docs.flxbl.io/sfp-server) and authenticates to it. Provides distributed locking to prevent concurrent access conflicts across parallel workflows.
+A GitHub Action that authenticates to a Salesforce environment with exclusive locking via [SFP Server](https://docs.flxbl.io/sfp-server). Provides distributed locking to prevent concurrent access conflicts across parallel workflows.
 
 **Automatic Unlock**: By default, this action automatically releases the environment lock when the workflow completes (success, failure, or cancellation).
 
@@ -13,7 +13,7 @@ A GitHub Action that locks a Salesforce environment using [SFP Server](https://d
 ```yaml
 - name: Lock and authenticate to environment
   id: lock-env
-  uses: flxbl-io/lock-environment@v1
+  uses: flxbl-io/auth-environment-with-lock@v1
   with:
     environment: 'QA'
     sfp-server-url: ${{ secrets.SFP_SERVER_URL }}
@@ -29,7 +29,7 @@ A GitHub Action that locks a Salesforce environment using [SFP Server](https://d
 
 ```yaml
 - name: Lock environment for deployment
-  uses: flxbl-io/lock-environment@v1
+  uses: flxbl-io/auth-environment-with-lock@v1
   with:
     environment: 'staging'
     reason: 'Release v1.2.3 deployment'
@@ -42,7 +42,7 @@ A GitHub Action that locks a Salesforce environment using [SFP Server](https://d
 
 ```yaml
 - name: Lock environment (max 10 min wait)
-  uses: flxbl-io/lock-environment@v1
+  uses: flxbl-io/auth-environment-with-lock@v1
   with:
     environment: 'ci-sandbox-1'
     wait-timeout: '10'  # Fail if lock not acquired within 10 minutes
@@ -55,7 +55,7 @@ A GitHub Action that locks a Salesforce environment using [SFP Server](https://d
 ```yaml
 - name: Lock environment (manual unlock later)
   id: lock-env
-  uses: flxbl-io/lock-environment@v1
+  uses: flxbl-io/auth-environment-with-lock@v1
   with:
     environment: 'QA'
     auto-unlock: 'false'
@@ -156,7 +156,7 @@ jobs:
 
       - name: Lock CI environment
         id: lock
-        uses: flxbl-io/lock-environment@v1
+        uses: flxbl-io/auth-environment-with-lock@v1
         with:
           environment: 'ci-sandbox'
           reason: 'PR #${{ github.event.pull_request.number }}'
