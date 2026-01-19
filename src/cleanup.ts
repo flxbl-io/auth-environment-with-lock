@@ -26,10 +26,11 @@ function printHeader(environment: string, serverUrl: string): void {
 async function execCommand(
   command: string,
   args: string[],
-  silent = false
+  options: { silent?: boolean; streamStderr?: boolean } = {}
 ): Promise<ExecOutput> {
   let stdout = '';
   let stderr = '';
+  const { silent = false, streamStderr = false } = options;
 
   const exitCode = await exec.exec(command, args, {
     silent,
@@ -38,7 +39,12 @@ async function execCommand(
         stdout += data.toString();
       },
       stderr: (data: Buffer) => {
-        stderr += data.toString();
+        const chunk = data.toString();
+        stderr += chunk;
+        // Stream stderr to console in real-time (shows sfp CLI headers and progress)
+        if (streamStderr) {
+          process.stdout.write(chunk);
+        }
       }
     },
     ignoreReturnCode: true
@@ -66,12 +72,10 @@ async function unlockEnvironment(
   core.info(`Unlocking environment: ${environment}`);
   core.info(`Ticket ID: ${ticketId}`);
 
-  const result = await execCommand('sfp', args, true);
+  // Stream stderr to show sfp CLI headers and progress
+  const result = await execCommand('sfp', args, { silent: true, streamStderr: true });
 
   if (result.exitCode !== 0) {
-    if (result.stderr) {
-      core.debug(`sfp stderr: ${result.stderr}`);
-    }
     throw new Error(`Failed to unlock environment: ${result.stderr || result.stdout}`);
   }
 
