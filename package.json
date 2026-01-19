@@ -1,6 +1,6 @@
 {
   "name": "@flxbl-io/auth-environment-with-lock",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "GitHub Action to authenticate to Salesforce environments with exclusive locking and automatic unlock",
   "main": "dist/index.js",
   "scripts": {
